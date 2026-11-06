@@ -157,6 +157,10 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var appendHttpProxy by configurationStore.boolean(Key.APPEND_HTTP_PROXY)
     var connectionTestURL by configurationStore.string(Key.CONNECTION_TEST_URL) { CONNECTION_TEST_URL }
     var connectionTestConcurrent by configurationStore.int("connectionTestConcurrent") { 5 }
+    var connectionTestAutoDaily by configurationStore.boolean(Key.CONNECTION_TEST_AUTO_DAILY) { false }
+    var connectionTestLastAt by configurationStore.long(Key.CONNECTION_TEST_LAST_AT) { 0L }
+    var connectionTestLastAvailable by configurationStore.int(Key.CONNECTION_TEST_LAST_AVAILABLE) { 0 }
+    var connectionTestLastTotal by configurationStore.int(Key.CONNECTION_TEST_LAST_TOTAL) { 0 }
     var alwaysShowAddress by configurationStore.boolean(Key.ALWAYS_SHOW_ADDRESS)
 
     var tunImplementation by configurationStore.stringToInt(Key.TUN_IMPLEMENTATION) { TunImplementation.GVISOR }

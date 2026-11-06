@@ -2,6 +2,7 @@ package io.nekohasekai.sagernet.database
 
 import io.nekohasekai.sagernet.GroupType
 import io.nekohasekai.sagernet.bg.SubscriptionUpdater
+import io.nekohasekai.sagernet.bg.UrlTestUpdater
 import io.nekohasekai.sagernet.ktx.applyDefaultValues
 
 object GroupManager {
@@ -85,6 +86,7 @@ object GroupManager {
         iterator { groupAdd(group) }
         if (group.type == GroupType.SUBSCRIPTION) {
             SubscriptionUpdater.reconfigureUpdater()
+            UrlTestUpdater.reconfigureUpdater()
         }
         return group
     }
@@ -94,6 +96,7 @@ object GroupManager {
         iterator { groupUpdated(group) }
         if (group.type == GroupType.SUBSCRIPTION) {
             SubscriptionUpdater.reconfigureUpdater()
+            UrlTestUpdater.reconfigureUpdater()
         }
     }
 
@@ -102,6 +105,7 @@ object GroupManager {
         SagerDatabase.proxyDao.deleteByGroup(groupId)
         iterator { groupRemoved(groupId) }
         SubscriptionUpdater.reconfigureUpdater()
+        UrlTestUpdater.reconfigureUpdater()
     }
 
     suspend fun deleteGroup(group: List<ProxyGroup>) {
@@ -109,6 +113,7 @@ object GroupManager {
         SagerDatabase.proxyDao.deleteByGroup(group.map { it.id }.toLongArray())
         for (proxyGroup in group) iterator { groupRemoved(proxyGroup.id) }
         SubscriptionUpdater.reconfigureUpdater()
+        UrlTestUpdater.reconfigureUpdater()
     }
 
 }

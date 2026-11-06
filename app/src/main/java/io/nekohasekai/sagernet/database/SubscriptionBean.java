@@ -22,6 +22,10 @@ public class SubscriptionBean extends Serializable {
     public Boolean autoUpdate;
     public Integer autoUpdateDelay;
     public Integer lastUpdated;
+    public Boolean autoUrlTest;
+    public Integer urlTestLastAt;
+    public Integer urlTestLastAvailable;
+    public Integer urlTestLastTotal;
 
     // SIP008
 
@@ -44,7 +48,7 @@ public class SubscriptionBean extends Serializable {
 
     @Override
     public void serializeToBuffer(ByteBufferOutput output) {
-        output.writeInt(1);
+        output.writeInt(2);
 
         output.writeInt(type);
 
@@ -59,6 +63,11 @@ public class SubscriptionBean extends Serializable {
         output.writeInt(lastUpdated);
 
         output.writeString(subscriptionUserinfo);
+
+        output.writeBoolean(autoUrlTest);
+        output.writeInt(urlTestLastAt);
+        output.writeInt(urlTestLastAvailable);
+        output.writeInt(urlTestLastTotal);
     }
 
     public void serializeForShare(ByteBufferOutput output) {
@@ -88,6 +97,12 @@ public class SubscriptionBean extends Serializable {
         autoUpdateDelay = input.readInt();
         lastUpdated = input.readInt();
         subscriptionUserinfo = input.readString();
+        if (version >= 2) {
+            autoUrlTest = input.readBoolean();
+            urlTestLastAt = input.readInt();
+            urlTestLastAvailable = input.readInt();
+            urlTestLastTotal = input.readInt();
+        }
     }
 
     public void deserializeFromShare(ByteBufferInput input) {
@@ -113,6 +128,10 @@ public class SubscriptionBean extends Serializable {
         if (autoUpdate == null) autoUpdate = false;
         if (autoUpdateDelay == null) autoUpdateDelay = 1440;
         if (lastUpdated == null) lastUpdated = 0;
+        if (autoUrlTest == null) autoUrlTest = false;
+        if (urlTestLastAt == null) urlTestLastAt = 0;
+        if (urlTestLastAvailable == null) urlTestLastAvailable = 0;
+        if (urlTestLastTotal == null) urlTestLastTotal = 0;
 
         if (bytesUsed == null) bytesUsed = 0L;
         if (bytesRemaining == null) bytesRemaining = 0L;

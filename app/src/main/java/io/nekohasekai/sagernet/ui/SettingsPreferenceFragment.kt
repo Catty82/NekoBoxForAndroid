@@ -3,7 +3,6 @@ package io.nekohasekai.sagernet.ui
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.text.format.DateFormat
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
@@ -13,21 +12,17 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import io.nekohasekai.sagernet.Key
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SagerNet
-import io.nekohasekai.sagernet.bg.UrlTestUpdater
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.preference.EditTextPreferenceModifiers
 import io.nekohasekai.sagernet.ktx.*
 import io.nekohasekai.sagernet.utils.Theme
 import moe.matsuri.nb4a.ui.*
-import java.util.Date
 
 class SettingsPreferenceFragment : PreferenceFragmentCompat() {
 
     private lateinit var isProxyApps: SwitchPreference
 
     private lateinit var globalCustomConfig: EditConfigPreference
-
-    private lateinit var connectionTestAutoDaily: SwitchPreference
 
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -39,27 +34,6 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
     private val reloadListener = Preference.OnPreferenceChangeListener { _, _ ->
         needReload()
         true
-    }
-
-    private fun updateConnectionTestAutoDailySummary() {
-        if (!::connectionTestAutoDaily.isInitialized) return
-        val lastAt = DataStore.connectionTestLastAt
-        connectionTestAutoDaily.summary = when {
-            lastAt > 0L -> {
-                val date = Date(lastAt)
-                val formatted = "${DateFormat.getDateFormat(requireContext()).format(date)} ${
-                    DateFormat.getTimeFormat(requireContext()).format(date)
-                }"
-                getString(
-                    R.string.connection_test_auto_daily_last,
-                    formatted,
-                    DataStore.connectionTestLastAvailable,
-                    DataStore.connectionTestLastTotal
-                )
-            }
-            DataStore.connectionTestAutoDaily -> getString(R.string.connection_test_auto_daily_waiting)
-            else -> getString(R.string.connection_test_auto_daily_sum)
-        }
     }
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
@@ -174,17 +148,6 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
             true
         }
 
-        connectionTestAutoDaily = findPreference(Key.CONNECTION_TEST_AUTO_DAILY)!!
-        updateConnectionTestAutoDailySummary()
-        connectionTestAutoDaily.setOnPreferenceChangeListener { _, newValue ->
-            DataStore.connectionTestAutoDaily = newValue as Boolean
-            runOnDefaultDispatcher {
-                UrlTestUpdater.reconfigureUpdater()
-            }
-            updateConnectionTestAutoDailySummary()
-            true
-        }
-
         mixedPort.onPreferenceChangeListener = reloadListener
         appendHttpProxy.onPreferenceChangeListener = reloadListener
         showDirectSpeed.onPreferenceChangeListener = reloadListener
@@ -216,7 +179,6 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
         if (::globalCustomConfig.isInitialized) {
             globalCustomConfig.notifyChanged()
         }
-        updateConnectionTestAutoDailySummary()
     }
 
 }

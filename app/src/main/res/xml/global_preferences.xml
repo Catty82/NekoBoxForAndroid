@@ -214,12 +214,6 @@
             app:title="@string/connection_test_url"
             app:useSimpleSummaryProvider="true" />
         <SwitchPreference
-            app:defaultValue="false"
-            app:icon="@drawable/ic_baseline_update_24"
-            app:key="connectionTestAutoDaily"
-            app:summary="@string/connection_test_auto_daily_sum"
-            app:title="@string/connection_test_auto_daily" />
-        <SwitchPreference
             app:icon="@drawable/baseline_construction_24"
             app:key="enableClashAPI"
             app:summary="@string/enable_clash_api_summary"

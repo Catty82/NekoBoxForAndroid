@@ -107,6 +107,10 @@
 <string name="connection_test_timeout">Тайм-аут</string>
 <string name="connection_test_unreachable">Недоступен</string>
 <string name="connection_test_url">URL-адрес проверки подключения</string>
+<string name="connection_test_auto_daily">Ежедневный URL Test</string>
+<string name="connection_test_auto_daily_sum">Раз в сутки для этой группы, без уведомлений</string>
+<string name="connection_test_auto_daily_waiting">Ожидание первой ежедневной проверки…</string>
+<string name="connection_test_auto_daily_last">Последняя проверка: %1$s · %2$d/%3$d доступны</string>
 <string name="connection_test_url_test">URL Тест</string>
 <string name="copy">Копировать</string>
 <string name="copy_toast_msg">Ссылка скопирована в буфер обмена.</string>

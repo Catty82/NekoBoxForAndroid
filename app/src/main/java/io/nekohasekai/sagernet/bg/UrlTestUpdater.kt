@@ -12,8 +12,10 @@ import androidx.work.WorkerParameters
 import androidx.work.multiprocess.RemoteWorkManager
 import io.nekohasekai.sagernet.bg.proto.UrlTest
 import io.nekohasekai.sagernet.database.DataStore
+import io.nekohasekai.sagernet.database.GroupManager
 import io.nekohasekai.sagernet.database.ProfileManager
 import io.nekohasekai.sagernet.database.ProxyEntity
+import io.nekohasekai.sagernet.database.ProxyGroup
 import io.nekohasekai.sagernet.database.SagerDatabase
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.app
@@ -33,17 +35,31 @@ object UrlTestUpdater {
 
     private const val WORK_NAME = "UrlTestUpdater"
     private const val WORK_NAME_ONCE = "UrlTestUpdaterOnce"
-    private val minIntervalMs = TimeUnit.HOURS.toMillis(20)
+    private val minIntervalSec = TimeUnit.HOURS.toSeconds(20).toInt()
 
     private val networkConstraints = Constraints.Builder()
         .setRequiredNetworkType(NetworkType.CONNECTED)
         .build()
 
+    private suspend fun autoUrlTestGroups(): List<ProxyGroup> {
+        return SagerDatabase.groupDao.subscriptions()
+            .filter { it.subscription?.autoUrlTest == true }
+    }
+
+    private fun isDue(group: ProxyGroup): Boolean {
+        val lastAt = group.subscription?.urlTestLastAt ?: 0
+        if (lastAt <= 0) return true
+        val now = (System.currentTimeMillis() / 1000).toInt()
+        return now - lastAt >= minIntervalSec
+    }
+
     suspend fun reconfigureUpdater() {
         val workManager = RemoteWorkManager.getInstance(app)
         workManager.cancelUniqueWork(WORK_NAME)
         workManager.cancelUniqueWork(WORK_NAME_ONCE)
-        if (!DataStore.connectionTestAutoDaily) return
+
+        val groups = autoUrlTestGroups()
+        if (groups.isEmpty()) return
 
         workManager.enqueueUniquePeriodicWork(
             WORK_NAME,
@@ -53,9 +69,7 @@ object UrlTestUpdater {
                 .build()
         )
 
-        val lastAt = DataStore.connectionTestLastAt
-        val due = lastAt <= 0L || System.currentTimeMillis() - lastAt >= minIntervalMs
-        if (due) {
+        if (groups.any(::isDue)) {
             workManager.enqueueUniqueWork(
                 WORK_NAME_ONCE,
                 ExistingWorkPolicy.REPLACE,
@@ -71,13 +85,8 @@ object UrlTestUpdater {
     ) : CoroutineWorker(appContext, params) {
 
         override suspend fun doWork(): Result {
-            if (!DataStore.connectionTestAutoDaily) return Result.success()
-
-            val lastAt = DataStore.connectionTestLastAt
-            if (lastAt > 0L && System.currentTimeMillis() - lastAt < minIntervalMs) {
-                Logs.d("urlTestAuto: skipped, checked recently")
-                return Result.success()
-            }
+            val groups = autoUrlTestGroups().filter(::isDue)
+            if (groups.isEmpty()) return Result.success()
 
             if (DataStore.runningTest) {
                 Logs.d("urlTestAuto: skipped, another test is running")
@@ -86,62 +95,9 @@ object UrlTestUpdater {
 
             DataStore.runningTest = true
             try {
-                val profilesList = SagerDatabase.proxyDao.getAll()
-                if (profilesList.isEmpty()) {
-                    Logs.d("urlTestAuto: no profiles")
-                    DataStore.connectionTestLastAt = System.currentTimeMillis()
-                    DataStore.connectionTestLastAvailable = 0
-                    DataStore.connectionTestLastTotal = 0
-                    return Result.success()
+                for (group in groups) {
+                    testGroup(group)
                 }
-
-                Logs.d("urlTestAuto: testing ${profilesList.size} profiles")
-                val profiles = ConcurrentLinkedQueue(profilesList)
-                val available = AtomicInteger(0)
-                val updateMutex = Mutex()
-                val pendingUpdates = mutableListOf<ProxyEntity>()
-
-                coroutineScope {
-                    val jobs = List(DataStore.connectionTestConcurrent.coerceAtLeast(1)) {
-                        async(Dispatchers.IO) {
-                            val urlTest = UrlTest()
-                            while (true) {
-                                val profile = profiles.poll() ?: break
-                                profile.status = 0
-                                try {
-                                    val result = urlTest.doTest(profile)
-                                    profile.status = 1
-                                    profile.ping = result
-                                    profile.error = null
-                                    available.incrementAndGet()
-                                } catch (e: PluginManager.PluginNotFoundException) {
-                                    profile.status = 2
-                                    profile.ping = 0
-                                    profile.error = e.readableMessage
-                                } catch (e: Exception) {
-                                    profile.status = 3
-                                    profile.ping = 0
-                                    profile.error = e.readableMessage
-                                }
-                                updateMutex.withLock {
-                                    pendingUpdates.add(profile)
-                                }
-                            }
-                        }
-                    }
-                    jobs.awaitAll()
-                }
-
-                if (pendingUpdates.isNotEmpty()) {
-                    ProfileManager.updateProfile(pendingUpdates)
-                }
-
-                DataStore.connectionTestLastAt = System.currentTimeMillis()
-                DataStore.connectionTestLastAvailable = available.get()
-                DataStore.connectionTestLastTotal = profilesList.size
-                Logs.d(
-                    "urlTestAuto: done ${available.get()}/${profilesList.size} available"
-                )
             } catch (e: Exception) {
                 Logs.w(e)
                 return Result.retry()
@@ -150,6 +106,72 @@ object UrlTestUpdater {
             }
 
             return Result.success()
+        }
+
+        private suspend fun testGroup(group: ProxyGroup) {
+            val subscription = group.subscription ?: return
+            val profilesList = SagerDatabase.proxyDao.getByGroup(group.id)
+            val now = (System.currentTimeMillis() / 1000).toInt()
+
+            if (profilesList.isEmpty()) {
+                Logs.d("urlTestAuto: no profiles in ${group.displayName()}")
+                subscription.urlTestLastAt = now
+                subscription.urlTestLastAvailable = 0
+                subscription.urlTestLastTotal = 0
+                SagerDatabase.groupDao.updateGroup(group)
+                GroupManager.postUpdate(group)
+                return
+            }
+
+            Logs.d("urlTestAuto: testing ${profilesList.size} profiles in ${group.displayName()}")
+            val profiles = ConcurrentLinkedQueue(profilesList)
+            val available = AtomicInteger(0)
+            val updateMutex = Mutex()
+            val pendingUpdates = mutableListOf<ProxyEntity>()
+
+            coroutineScope {
+                val jobs = List(DataStore.connectionTestConcurrent.coerceAtLeast(1)) {
+                    async(Dispatchers.IO) {
+                        val urlTest = UrlTest()
+                        while (true) {
+                            val profile = profiles.poll() ?: break
+                            profile.status = 0
+                            try {
+                                val result = urlTest.doTest(profile)
+                                profile.status = 1
+                                profile.ping = result
+                                profile.error = null
+                                available.incrementAndGet()
+                            } catch (e: PluginManager.PluginNotFoundException) {
+                                profile.status = 2
+                                profile.ping = 0
+                                profile.error = e.readableMessage
+                            } catch (e: Exception) {
+                                profile.status = 3
+                                profile.ping = 0
+                                profile.error = e.readableMessage
+                            }
+                            updateMutex.withLock {
+                                pendingUpdates.add(profile)
+                            }
+                        }
+                    }
+                }
+                jobs.awaitAll()
+            }
+
+            if (pendingUpdates.isNotEmpty()) {
+                ProfileManager.updateProfile(pendingUpdates)
+            }
+
+            subscription.urlTestLastAt = now
+            subscription.urlTestLastAvailable = available.get()
+            subscription.urlTestLastTotal = profilesList.size
+            SagerDatabase.groupDao.updateGroup(group)
+            GroupManager.postUpdate(group)
+            Logs.d(
+                "urlTestAuto: ${group.displayName()} ${available.get()}/${profilesList.size} available"
+            )
         }
     }
 

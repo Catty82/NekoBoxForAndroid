@@ -14,6 +14,8 @@ import com.google.android.material.bottomappbar.BottomAppBar
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.bg.BaseService
 import io.nekohasekai.sagernet.database.DataStore
+import io.nekohasekai.sagernet.database.ProfileManager
+import io.nekohasekai.sagernet.database.SagerDatabase
 import io.nekohasekai.sagernet.ktx.*
 import io.nekohasekai.sagernet.ui.MainActivity
 import kotlinx.coroutines.Dispatchers
@@ -129,6 +131,18 @@ class StatsBar @JvmOverloads constructor(
         runOnDefaultDispatcher {
             try {
                 val elapsed = activity.urlTest()
+                // Update the active profile's ping so the configuration list
+                // reflects this result and delay-based sorting stays current.
+                val profileId = DataStore.currentProfile
+                if (profileId > 0) {
+                    val profile = SagerDatabase.proxyDao.getById(profileId)
+                    if (profile != null) {
+                        profile.status = 1
+                        profile.ping = elapsed
+                        profile.error = null
+                        ProfileManager.updateProfile(profile)
+                    }
+                }
                 onMainDispatcher {
                     isEnabled = true
                     setStatus(

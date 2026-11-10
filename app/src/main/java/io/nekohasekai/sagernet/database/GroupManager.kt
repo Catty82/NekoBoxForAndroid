@@ -21,7 +21,7 @@ object GroupManager {
             group: ProxyGroup,
             changed: Int,
             added: List<String>,
-            updated: Map<String, String>,
+            updated: Map<String, List<String>>,
             deleted: List<String>,
             duplicate: List<String>,
             byUser: Boolean

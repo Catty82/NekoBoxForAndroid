@@ -152,7 +152,7 @@ object RawUpdater : GroupUpdater() {
 
         val toUpdate = ArrayList<ProxyEntity>()
         val added = mutableListOf<String>()
-        val updated = mutableMapOf<String, String>()
+        val updated = linkedMapOf<String, List<String>>()
         val deleted = toDelete.map { it.displayName() }
 
         var userOrder = 1L
@@ -167,9 +167,12 @@ object RawUpdater : GroupUpdater() {
                 when {
                     existsBean != bean -> {
                         changed++
+                        val oldName = entity.displayName()
+                        val fieldDiffs = existsBean.diffFields(bean)
                         entity.putBean(bean)
                         toUpdate.add(entity)
-                        updated[entity.displayName()] = name
+                        val title = if (oldName == name) name else "$oldName => $name"
+                        updated[title] = fieldDiffs
 
                         Logs.d("Updated profile: $name")
                     }

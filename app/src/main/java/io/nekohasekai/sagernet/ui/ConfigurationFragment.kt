@@ -375,6 +375,10 @@ class ConfigurationFragment @JvmOverloads constructor(
                 startFilesForResult(importFile, "*/*")
             }
 
+            R.id.action_apps_vpn_mode -> {
+                startActivity(Intent(requireActivity(), AppManagerActivity::class.java))
+            }
+
             R.id.action_new_socks -> {
                 startActivity(Intent(requireActivity(), SocksSettingsActivity::class.java))
             }

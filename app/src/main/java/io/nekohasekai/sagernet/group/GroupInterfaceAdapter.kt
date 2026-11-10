@@ -4,6 +4,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.database.GroupManager
 import io.nekohasekai.sagernet.database.ProxyGroup
+import io.nekohasekai.sagernet.ktx.formatSubscriptionUpdated
 import io.nekohasekai.sagernet.ktx.onMainDispatcher
 import io.nekohasekai.sagernet.ktx.runOnMainDispatcher
 import io.nekohasekai.sagernet.ui.ThemedActivity
@@ -30,7 +31,7 @@ class GroupInterfaceAdapter(val context: ThemedActivity) : GroupManager.Interfac
         group: ProxyGroup,
         changed: Int,
         added: List<String>,
-        updated: Map<String, String>,
+        updated: Map<String, List<String>>,
         deleted: List<String>,
         duplicate: List<String>,
         byUser: Boolean
@@ -51,10 +52,10 @@ class GroupInterfaceAdapter(val context: ThemedActivity) : GroupManager.Interfac
                 )
             }
             if (updated.isNotEmpty()) {
-                status += context.getString(R.string.group_changed,
-                        updated.map { it }.joinToString("\n", postfix = "\n\n") {
-                            if (it.key == it.value) it.key else "${it.key} => ${it.value}"
-                        })
+                status += context.getString(
+                        R.string.group_changed,
+                        formatSubscriptionUpdated(updated) + "\n\n"
+                )
             }
             if (deleted.isNotEmpty()) {
                 status += context.getString(

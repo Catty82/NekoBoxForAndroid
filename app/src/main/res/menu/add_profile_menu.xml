@@ -11,7 +11,7 @@
         android:id="@+id/action_apps_vpn_mode"
         android:icon="@drawable/ic_navigation_apps"
         android:title="@string/proxied_apps"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
 
     <item
         android:id="@+id/action_add"

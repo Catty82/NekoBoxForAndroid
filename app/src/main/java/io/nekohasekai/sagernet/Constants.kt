@@ -146,6 +146,10 @@ object Key {
     const val SUBSCRIPTION_USER_AGENT = "subscriptionUserAgent"
     const val SUBSCRIPTION_AUTO_UPDATE = "subscriptionAutoUpdate"
     const val SUBSCRIPTION_AUTO_UPDATE_DELAY = "subscriptionAutoUpdateDelay"
+    const val SUBSCRIPTION_AUTO_URL_TEST = "subscriptionAutoUrlTest"
+    const val SUBSCRIPTION_URL_TEST_LAST_AT = "subscriptionUrlTestLastAt"
+    const val SUBSCRIPTION_URL_TEST_LAST_AVAILABLE = "subscriptionUrlTestLastAvailable"
+    const val SUBSCRIPTION_URL_TEST_LAST_TOTAL = "subscriptionUrlTestLastTotal"
 
     //
 

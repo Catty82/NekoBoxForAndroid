@@ -88,6 +88,12 @@
             app:key="subscriptionAutoUpdateDelay"
             app:title="@string/auto_update_delay"
             app:useSimpleSummaryProvider="true" />
+        <SwitchPreference
+            app:defaultValue="false"
+            app:icon="@drawable/ic_baseline_update_24"
+            app:key="subscriptionAutoUrlTest"
+            app:summary="@string/connection_test_auto_daily_sum"
+            app:title="@string/connection_test_auto_daily" />
     </PreferenceCategory>
 
 </PreferenceScreen>

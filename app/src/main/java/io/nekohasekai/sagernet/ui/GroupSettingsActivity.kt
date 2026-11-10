@@ -6,6 +6,7 @@ import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.os.Parcelable
+import android.text.format.DateFormat
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -31,6 +32,7 @@ import io.nekohasekai.sagernet.widget.ListListener
 import io.nekohasekai.sagernet.widget.OutboundPreference
 import kotlinx.parcelize.Parcelize
 import moe.matsuri.nb4a.ui.SimpleMenuPreference
+import java.util.Date
 
 @Suppress("UNCHECKED_CAST")
 class GroupSettingsActivity(
@@ -60,6 +62,10 @@ class GroupSettingsActivity(
         DataStore.subscriptionUserAgent = subscription.customUserAgent
         DataStore.subscriptionAutoUpdate = subscription.autoUpdate
         DataStore.subscriptionAutoUpdateDelay = subscription.autoUpdateDelay
+        DataStore.subscriptionAutoUrlTest = subscription.autoUrlTest
+        DataStore.subscriptionUrlTestLastAt = subscription.urlTestLastAt
+        DataStore.subscriptionUrlTestLastAvailable = subscription.urlTestLastAvailable
+        DataStore.subscriptionUrlTestLastTotal = subscription.urlTestLastTotal
     }
 
     fun ProxyGroup.serialize() {
@@ -81,6 +87,8 @@ class GroupSettingsActivity(
                 customUserAgent = DataStore.subscriptionUserAgent
                 autoUpdate = DataStore.subscriptionAutoUpdate
                 autoUpdateDelay = DataStore.subscriptionAutoUpdateDelay
+                autoUrlTest = DataStore.subscriptionAutoUrlTest
+                // Preserve urlTestLast* already loaded from DB on this subscription object.
             }
         }
     }
@@ -146,6 +154,31 @@ class GroupSettingsActivity(
             findPreference<SwitchPreference>(Key.SUBSCRIPTION_AUTO_UPDATE)!!
         val subscriptionAutoUpdateDelay =
             findPreference<EditTextPreference>(Key.SUBSCRIPTION_AUTO_UPDATE_DELAY)!!
+        val subscriptionAutoUrlTest =
+            findPreference<SwitchPreference>(Key.SUBSCRIPTION_AUTO_URL_TEST)!!
+
+        fun updateAutoUrlTestSummary() {
+            val lastAt = DataStore.subscriptionUrlTestLastAt
+            subscriptionAutoUrlTest.summary = when {
+                lastAt > 0 -> {
+                    val date = Date(lastAt * 1000L)
+                    val formatted = "${DateFormat.getDateFormat(this@GroupSettingsActivity).format(date)} ${
+                        DateFormat.getTimeFormat(this@GroupSettingsActivity).format(date)
+                    }"
+                    getString(
+                        R.string.connection_test_auto_daily_last,
+                        formatted,
+                        DataStore.subscriptionUrlTestLastAvailable,
+                        DataStore.subscriptionUrlTestLastTotal
+                    )
+                }
+                DataStore.subscriptionAutoUrlTest -> {
+                    getString(R.string.connection_test_auto_daily_waiting)
+                }
+                else -> getString(R.string.connection_test_auto_daily_sum)
+            }
+        }
+        updateAutoUrlTestSummary()
 
         subscriptionAutoUpdateDelay.isEnabled = subscriptionAutoUpdate.isChecked
         subscriptionAutoUpdateDelay.setOnPreferenceChangeListener { _, newValue ->
@@ -158,6 +191,11 @@ class GroupSettingsActivity(
         }
         subscriptionAutoUpdate.setOnPreferenceChangeListener { _, newValue ->
             subscriptionAutoUpdateDelay.isEnabled = (newValue as Boolean)
+            true
+        }
+        subscriptionAutoUrlTest.setOnPreferenceChangeListener { _, newValue ->
+            DataStore.subscriptionAutoUrlTest = newValue as Boolean
+            updateAutoUrlTestSummary()
             true
         }
     }
